@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="com.example.finalpro.dao.AdminDAO">
+    <!-- 신고 10개 넘은 애들 -->
+    <select id="memRptList" resultType="com.example.finalpro.vo.CommonMemberVO" parameterType="com.example.finalpro.vo.PagingVO">
+        SELECT a.* FROM
+        (select rownum rn, m.*,g.grade_name from
+            (select * from mem where mem_rpt_cnt >=10 order by mem_rpt_cnt desc)m,
+            (select * from grade) g
+            WHERE m.grade_no = g.grade_no
+            order by m.mem_rpt_cnt desc)a
+            where rn between #{start} and #{end}
+    </select>
+
+    <!-- 블랙리스트로 보내버리는 액션 -->
+    <update id="memBlackAction" parameterType="com.example.finalpro.vo.CommonMemberVO">
+        UPDATE MEM SET MEM_BLACK_DATE = SYSDATE+4, MEM_RPT_CNT = 0 WHERE MEM_NO=#{mem_no}
+    </update>
+
+    <!-- 블랙리스트 -->
+    <select id="memBlackList" resultType="com.example.finalpro.vo.CommonMemberVO" parameterType="com.example.finalpro.vo.PagingVO">
+		SELECT A.* FROM
+	    	(SELECT ROWNUM RN,M.*,G.GRADE_NAME FROM
+	        	(SELECT * FROM MEM WHERE MEM_BLACK_DATE > SYSDATE ORDER BY MEM_BLACK_DATE ASC)M,
+	        	(SELECT * FROM GRADE) G
+	        	WHERE M.GRADE_NO=G.GRADE_NO
+	        	ORDER BY M.MEM_BLACK_DATE ASC)A
+	        	WHERE RN BETWEEN #{start} AND #{end}
+    </select>
+    
+    <!-- Q신고 10개 넘은 리스트 -->
+    <select id="qRptList" resultType="com.example.finalpro.vo.QboardVO"  parameterType="com.example.finalpro.vo.PagingVO">
+		SELECT A.* FROM
+		    (SELECT ROW_NUMBER() OVER(ORDER BY Q.Q_RPT_CNT DESC)RN,Q.*,M.MEM_NICK,S.SUB_CA_NAME,B.BOOK_CA_NAME FROM 
+		    (SELECT * FROM Q WHERE Q_RPT_CNT>=10) Q,
+		    (SELECT * FROM MEM) M,
+		    (SELECT * FROM SUB_CA) S,
+		    (SELECT * FROM BOOK_CA) B
+		    WHERE Q.MEM_NO = M.MEM_NO
+		    AND Q.SUB_CA_NO = S.SUB_CA_NO
+		    AND Q.BOOK_CA_NO = B.BOOK_CA_NO)A
+		    WHERE RN BETWEEN #{start} AND #{end}
+    </select>
+	<!-- Q신고 10개 넘은거 삭제 -->
+	<delete id="qDeleteAction" parameterType="com.example.finalpro.vo.QboardVO">
+		DELETE Q WHERE Q_NO=#{param1}
+	</delete>    
+    
+    <!-- 승인허가 리스트 -->
+    <select id="bookStandByList" resultType="com.example.finalpro.vo.QboardVO"  parameterType="com.example.finalpro.vo.PagingVO">
+
+SELECT RN,A.* FROM 
+		(SELECT ROWNUM RN,A.* FROM
+        ( SELECT BS.BOOK_SCRAP_CNT,C.CA_NAME,SC.SUB_CA_NAME,BC.BOOK_CA_NAME,M.MEM_NICK,Q1.*,C.CA_NO FROM 
+		(SELECT * FROM Q WHERE Q_ADMIN_STATE=3) Q1,
+		(SELECT * FROM MEM) M,
+		(SELECT * FROM SUB_CA) SC,
+		(SELECT * FROM CA) C,
+        (SELECT * FROM BOOK_CA) BC,
+        (SELECT * FROM BOOK_SCRAP ORDER BY BOOK_SCRAP_CNT DESC) BS
+		WHERE Q1.MEM_NO = M.MEM_NO
+        AND Q1.Q_NO = BS.Q_NO
+		AND Q1.SUB_CA_NO = SC.SUB_CA_NO
+		AND SC.CA_NO = C.CA_NO
+        AND Q1.BOOK_CA_NO = BC.BOOK_CA_NO
+        ORDER BY BS.BOOK_SCRAP_CNT DESC)A)A
+        WHERE RN BETWEEN #{start} AND #{end}
+	</select>
+	
+	<!-- 승인 ( 책에 추가 )  필요 없는 컬럼
+	<insert id="bookAddAction" parameterType="com.example.finalpro.vo.QboardVO">
+		insert into test3 values(1)
+	</insert> -->
+	<!-- 승인 ( 어드빈 상태 4 로 변경 )  -->
+	<update id="bookAdminStateUpdate" parameterType="com.example.finalpro.vo.QboardVO">
+		UPDATE Q SET Q_ADMIN_STATE=4 WHERE Q_NO=#{param1}
+	</update>
+	
+	<!-- 카테고리리스트 -->
+	<select id="caList" resultType="com.example.finalpro.vo.CategoryVO">
+		SELECT * FROM CA
+	</select>
+	<!-- 서브카테고리리스트 -->
+	<select id="subCaList" resultType="com.example.finalpro.vo.CategoryVO">
+		SELECT * FROM SUB_CA WHERE CA_NO=#{ca_no}
+	</select>
+	<!-- 책카테고리리스트 -->
+	<select id="bookCaList" resultType="com.example.finalpro.vo.CategoryVO">
+		SELECT * FROM BOOK_CA WHERE SUB_CA_NO=#{subCa}
+	</select>
+	<!-- 책카테고리수정폼 -->
+	<select id="bookCaNameUpdateForm" resultType="com.example.finalpro.vo.CategoryVO">
+		SELECT * FROM BOOK_CA WHERE BOOK_CA_NO=#{param1}
+	</select>
+	<!-- 책카테고리업데이트 -->
+	<update id="bookCaNameUpdateAction" parameterType="com.example.finalpro.vo.CategoryVO">
+		UPDATE BOOK_CA SET BOOK_CA_NAME=#{book_ca_name} WHERE BOOK_CA_NO=#{book_ca_no}
+	</update>
+	<!-- 어드민명성수정폼 -->
+	<select id="adminExpUpdateForm" resultType="com.example.finalpro.vo.CommonMemberVO">
+		SELECT * FROM MEM WHERE MEM_NICK='admin'
+	</select>
+	<!-- 어드민명성액션 -->
+	<update id="adminExpUpdateAction" parameterType="com.example.finalpro.vo.CommonMemberVO">
+		UPDATE MEM SET MEM_EXP=#{param1} WHERE MEM_NICK='admin'
+	</update>
+	<!-- 밑에는 카운트 -->
+	<select id="memRptCount" resultType="int">
+		SELECT COUNT(*) FROM MEM WHERE MEM_RPT_CNT >=10
+	</select>
+	<select id="memBlackCount" resultType="int">
+		SELECT COUNT(*) FROM MEM WHERE MEM_BLACK_DATE>SYSDATE
+	</select>
+	<select id="qRptCount" resultType="int">
+		SELECT COUNT(*) FROM Q WHERE Q_RPT_CNT >=10
+	</select>
+	<select id="bookStandByCount" resultType="int">
+		SELECT COUNT(*) FROM Q WHERE Q_ADMIN_STATE = 3
+	</select>
+
+	<!-- 사업자 승인 대기중 리스트 -->
+	<select id="bizStandByList" resultType="com.example.finalpro.vo.BusinessMemberVO">
+		SELECT A.* FROM (
+		SELECT ROWNUM RN, B.* FROM
+		(SELECT * FROM BIZ WHERE BIZ_STATE=0 ORDER BY BIZ_DATE ASC)B)A
+		WHERE RN BETWEEN #{start} AND #{end}
+	</select>
+	<!-- 사업자 승인 대기중 총 수 -->
+	<select id="bizStandByCount" resultType="Integer">
+		SELECT COUNT(*) FROM BIZ WHERE BIZ_STATE=0
+	</select>
+	<!-- 사업자 승인 액션 -->
+	<update id="bizStateUpdate">
+		UPDATE BIZ SET BIZ_STATE = 1 WHERE BIZ_NO = #{param1}
+	</update>
+</mapper>

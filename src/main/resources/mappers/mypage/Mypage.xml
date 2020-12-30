@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+
+<mapper namespace="com.example.finalpro.dao.MypageDAO">
+	<!-- 마이페이지 내가한 질문 -->
+	<select id="myquestion" resultType="com.example.finalpro.vo.QboardVO" >
+		SELECT A.*
+		FROM
+		(SELECT ROWNUM RN, Q.*,B.BOOK_CA_NAME,S.SUB_CA_NAME FROM
+		(SELECT * FROM Q WHERE MEM_NO=#{mem_no} ORDER BY Q_NO DESC) Q,
+		(SELECT * FROM SUB_CA) S,
+		(SELECT * FROM BOOK_CA) B
+		WHERE Q.SUB_CA_NO = S.SUB_CA_NO
+		AND B.BOOK_CA_NO = Q. BOOK_CA_NO ) A
+		WHERE RN BETWEEN #{start} AND #{end}
+	</select>
+	<!-- 마이페이지 내가한 답변 -->
+	<select id="myreply" resultType="com.example.finalpro.vo.ReplyBoardVO">
+		SELECT  A.*
+		FROM
+		(SELECT ROWNUM RN, Q.Q_TITLE,Q.Q_NO,Q.Q_UP,Q.Q_DATE,S.SUB_CA_NAME,S.SUB_CA_NO,B.BOOK_CA_NAME,B.BOOK_CA_NO,M.MEM_NICK, C.CA_NAME FROM
+		(SELECT * FROM REPLY WHERE MEM_NO=#{mem_no} ORDER BY REPLY_NO DESC) R,
+		(SELECT * FROM Q) Q,
+		(SELECT * FROM SUB_CA)S,
+		(SELECT * FROM BOOK_CA) B,
+		(SELECT * FROM MEM) M,
+		(SELECT * FROM CA) C
+		WHERE Q.SUB_CA_NO = S.SUB_CA_NO
+		AND Q.BOOK_CA_NO = B.BOOK_CA_NO
+		AND Q.MEM_NO = M.MEM_NO
+		AND C.CA_NO = S.CA_NO
+		AND Q.Q_NO = R.Q_NO)A
+		WHERE RN BETWEEN #{start} AND #{end}
+	</select>
+	<!-- 내정보 -->
+	<select id="mypageUpdateForm" resultType="com.example.finalpro.vo.CommonMemberVO">
+		SELECT *
+		FROM MEM M,
+		(SELECT * FROM GRADE)G,
+		(SELECT COUNT(*)REPLYCNT FROM REPLY WHERE MEM_NO=#{mem_no})R,
+		(SELECT COUNT(*)QUESTIONCNT FROM Q WHERE MEM_NO=#{mem_no})Q,
+		(SELECT COUNT(*)SCRAPCNT FROM MY_SCRAP WHERE MEM_NO=#{mem_no})S
+		WHERE MEM_NO=#{mem_no}
+		AND M.GRADE_NO = G.GRADE_NO
+	</select>
+	<!-- 내 질문 카운트 -->
+	<select id="myquestionCount" resultType="int">
+		SELECT COUNT(*) FROM Q WHERE MEM_NO=#{param1}
+	</select>
+	<!-- 내 답변 카운트 -->
+	<select id="myreplyCount" resultType="int">
+		SELECT COUNT(*) FROM REPLY WHERE MEM_NO=#{param1}
+	</select>
+</mapper>
